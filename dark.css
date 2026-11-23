@@ -1,0 +1,107 @@
+/* Dayfold v0.2 — dark-first theme. Kept separate from layout styles. */
+:root {
+  color-scheme: dark;
+  --ink: #e5efe9;
+  --muted: #a0b3a7;
+  --surface: #192720;
+  --bg: #101a15;
+  --line: #31463a;
+  --deep: #345e49;
+  --accent: #9ad2ad;
+  --accent-pale: #233d30;
+  --soft: #1d3025;
+  --danger: #ff9ba2;
+  --shadow: 0 6px 26px rgba(0, 0, 0, .16);
+  color: var(--ink);
+  background: var(--bg);
+}
+body { background: var(--bg); color: var(--ink); }
+button, input, select, textarea { color: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+  outline: 2px solid #a9dcba;
+  outline-offset: 2px;
+}
+.sidebar, .card, .modal { background: var(--surface); color: var(--ink); }
+.sidebar { border-color: var(--line); }
+.brand-symbol { background: #315842; }
+.nav-btn { color: #bac9bf; }
+.nav-btn.active { background: #294331; color: #ddf8e7; }
+.nav-btn:hover:not(.active) { background: #29392e; }
+.sidebar-foot { color: #9ab3a4; }
+.sidebar-foot small { color: #8d9f93; }
+.eyebrow { color: #9bcaaa; }
+.page h1 { color: #ecf5ef; }
+.btn { background: #24362b; border-color: #3d5344; color: #e2eee5; }
+.btn:hover { background: #304738; }
+.btn.primary { background: #448763; color: #fff; border-color: #509771; }
+.btn.primary:hover { background: #509872; }
+.btn.danger { color: var(--danger); border-color: #693b44; }
+.btn.flat { background: transparent; }
+.stat-detail, .time-stamp, .activity-note, .activity-end, .empty-note,
+.form-note, .hint, .hist-label, .hist-top, .period-head { color: #9bb0a1; }
+.timeline-track { border-color: #395045; }
+.timeline-track:before { background: #8fba9d; border-color: #192720; }
+.activity-block { background: #213229; color: var(--ink); border-color: #354b3d; border-left-color: var(--cat-color, #85a7a0); }
+.activity-block:hover { background: #2b4234; }
+.activity-title { color: #ebf5ec; }
+.tag-pill { background: #314b39; color: #c6e1cb; }
+.gap-block { background: #1a2a20; border-color: #425d4a; color: #bed2c3; }
+.gap-block:hover { background: #273c2c; border-color: #7fb08b; }
+.quick-card { background: #253c2c; border-color: #3b5a42; }
+.quick-card p { color: #b8cebf; }
+.field label, .field-label { color: #b3cbb7; }
+.field input, .field select, .field textarea, .period-line input {
+  background: #15231a;
+  border-color: #425548;
+  color: #e9f4ec;
+  color-scheme: dark;
+}
+.field input::placeholder, .field textarea::placeholder { color: #91a696; }
+.field input:focus, .field select:focus, .field textarea:focus { outline-color: #7bad89; border-color: #7bad89; }
+.choice-pill, .tag-button, .tag-option, .check-chip {
+  background: #26392c;
+  border-color: #425947;
+  color: #d5e8d8;
+}
+.choice-pill.active, .tag-option.chosen { background: #36593e; border-color: #71af81; color: #f1fff1; }
+.tag-button:hover { border-color: #83b28a; }
+.donut { background: #324238; }
+.donut:after { background: var(--surface); }
+.donut-sub { color: #afc2b2; }
+.soft-badge, .group-badge { background: #2c4534; color: #c1dfc8; }
+.small-head { color: #d5e8d9; }
+.hist-stack { background: #32493a; }
+.hist-empty { background: #405546; }
+.label-children { background: #16231b; }
+.label-row+.label-row, .label-children .label-row { border-top-color: #304237; }
+.compact-list .item { background: #25392c; }
+.search-result { background: #1c2d22; border-color: #395442; color: #dcebe0; }
+.search-result:hover { background: #294331; border-color: #7bad89; }
+.advanced-panel { border-color: var(--line); }
+.key-value { border-color: var(--line); }
+.callout { background: #263c2d; border-color: #435c47; color: #c5dccc; }
+.modal-backdrop { background: rgba(4, 11, 7, .73); }
+.modal { box-shadow: 0 28px 100px rgba(0, 0, 0, .45); }
+.color-option { border-color: #1c2b21; box-shadow: 0 0 0 1px #6a796e; }
+.color-option.selected { box-shadow: 0 0 0 2px #b4e5c0; }
+.toast { background: #365a42; color: #f4fff5; }
+.jump-date { color: #b7d2bf; }
+/* The free Netlify badge sits at the bottom-right of the site. Keep navigation
+   well above it, rather than allowing its independent iframe to obscure tabs. */
+@media (max-width: 800px) {
+  .app-shell { padding-bottom: calc(142px + env(safe-area-inset-bottom)); }
+  .bottom-nav {
+    bottom: 68px;
+    background: rgba(25, 39, 32, .98);
+    border-top-color: #374e3d;
+    border-bottom: 1px solid #374e3d;
+    box-shadow: 0 0 18px rgba(0, 0, 0, .17);
+  }
+  .bottom-btn { color: #afc2b3; }
+  .bottom-btn.active { color: #a9e3b9; background: #284332; }
+  .page { padding-bottom: 120px; }
+  .toast { bottom: 144px; }
+}
+@media (max-width: 430px) {
+  .bottom-btn { min-width: 0; flex: 1; padding: 6px 3px; }
+}

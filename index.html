@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101a15">
+  <meta name="description" content="A private, offline activity journal with flexible statistics.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" type="image/png" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./dark.css">
+  <title>Dayfold — Offline activity journal</title>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-symbol" aria-hidden="true"><span></span><span></span><span></span></div><div><div class="brand-name">dayfold<span class="brand-dot">.</span></div><div class="brand-sub">PRIVATE TIME JOURNAL</div></div></div>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button class="nav-btn active" data-view="journal"><span class="nav-ico">◫</span> Journal</button>
+        <button class="nav-btn" data-view="insights"><span class="nav-ico">◉</span> Insights</button>
+        <button class="nav-btn" data-view="labels"><span class="nav-ico">▦</span> Labels & tags</button>
+        <button class="nav-btn" data-view="settings"><span class="nav-ico">⚙</span> Settings</button>
+      </nav>
+      <div class="sidebar-foot"><span class="status-dot"></span> Local-only storage<br><small>No account · No tracking</small></div>
+    </aside>
+    <main class="main-area">
+      <div id="app-content" aria-live="off"></div>
+    </main>
+  </div>
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button class="bottom-btn active" data-view="journal"><span class="bottom-symbol">◫</span>Journal</button>
+    <button class="bottom-btn" data-view="insights"><span class="bottom-symbol">◉</span>Insights</button>
+    <button class="bottom-btn" data-view="labels"><span class="bottom-symbol">▦</span>Labels</button>
+    <button class="bottom-btn" data-view="settings"><span class="bottom-symbol">⚙</span>Settings</button>
+  </nav>
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
