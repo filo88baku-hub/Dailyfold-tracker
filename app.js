@@ -156,10 +156,11 @@ function ringGradient(stat){
  if(stat.denomH<=0)return '#eef1ed';
  let value=0;const segments=[];
  for(const b of stat.visibleBuckets){const pct=Math.min(100-value,b.hours/stat.denomH*100);if(pct>0.00001){segments.push(`${b.color} ${value.toFixed(4)}% ${(value+pct).toFixed(4)}%`);value+=pct;}}
- if(value<99.999)segments.push(`#edf0ed ${value.toFixed(4)}% 100%`);
+ if(value<99.999)segments.push(`#64796a ${value.toFixed(4)}% 100%`);
  return `conic-gradient(${segments.join(',')})`;
 }
-function makeHistogram(st){
+function makeHistogram(st,large=false){
+ const barHeight=large?300:174;
  const range=st.range;let group,makeKey,makeLabel;
  const days=(range.end-range.start)/ONE_DAY;
  if(ui.period==='day'||ui.period==='week'||(ui.period==='custom'&&days<=16)){group='day';makeKey=d=>localYMD(d);makeLabel=d=>`${d.getDate()} ${d.toLocaleDateString(undefined,{month:'short'})}`;}
@@ -182,7 +183,28 @@ function makeHistogram(st){
  for(const s of st.visible){const d=new Date(s.start),key=makeKey(d),bar=bars.get(key);if(!bar)continue;const bucket=bucketFor(s.labelId,ui.breakdown);bar.values.set(bucket.key,(bar.values.get(bucket.key)||0)+s.hours);bar.hours+=s.hours;}
  const ordered=[...bars.values()];if(ordered.length>55)return '<div class="empty-state">This range contains too many groups for the chart. Choose a shorter date range.</div>';
  const max=Math.max(1,...ordered.map(b=>b.hours));const colors=new Map(st.visibleBuckets.map(x=>[x.key,x.color]));
- return `<div class="hist-chart" role="img" aria-label="Recorded activity hours by ${group}">${ordered.map(b=>{const px=Math.max(0,174*b.hours/max);const inner=[...b.values.entries()].map(([key,value])=>`<div class="hist-segment" style="height:${100*value/Math.max(b.hours,.001)}%;background:${colors.get(key)||'#9da9a0'}"></div>`).join('');return `<div class="hist-col" title="${esc(b.label)}: ${hoursNumber(b.hours)} hours"><span class="hist-top">${b.hours?hoursNumber(b.hours):''}</span><div class="hist-stack-wrap">${b.hours?`<div class="hist-stack" style="height:${Math.max(px,2)}px">${inner}</div>`:'<div class="hist-empty"></div>'}</div><span class="hist-label">${esc(b.label)}</span></div>`}).join('')}</div>`;
+ return `<div class="hist-chart${large?' hist-chart-large':''}" role="img" aria-label="Recorded activity hours by ${group}">${ordered.map(b=>{const px=Math.max(0,barHeight*b.hours/max);const inner=[...b.values.entries()].map(([key,value])=>`<div class="hist-segment" style="height:${100*value/Math.max(b.hours,.001)}%;background:${colors.get(key)||'#9da9a0'}"></div>`).join('');return `<div class="hist-col" title="${esc(b.label)}: ${hoursNumber(b.hours)} hours"><span class="hist-top">${b.hours?hoursNumber(b.hours):''}</span><div class="hist-stack-wrap" style="height:${barHeight}px">${b.hours?`<div class="hist-stack" style="height:${Math.max(px,2)}px">${inner}</div>`:'<div class="hist-empty"></div>'}</div><span class="hist-label">${esc(b.label)}</span></div>`}).join('')}</div>`;
+}
+function distributionLegend(st){
+ return `<div class="chart-key" aria-label="Activity percentage legend">${st.visibleBuckets.map(b=>`<div class="info-line"><span class="legend-name"><i class="dot" style="background:${b.color}"></i><span>${esc(b.name)}</span></span><span class="legend-metric"><strong>${percentage(b.hours,st.denomH)}</strong><span class="legend-hours">${hoursNumber(b.hours)} h</span></span></div>`).join('')}${st.denomH>st.shownH+.0001?`<div class="info-line"><span class="legend-name"><i class="dot" style="background:#64796a"></i><span>Outside selection</span></span><span class="legend-metric"><strong>${percentage(st.denomH-st.shownH,st.denomH)}</strong><span class="legend-hours">${hoursNumber(st.denomH-st.shownH)} h</span></span></div>`:''}</div>`;
+}
+function distributionVisual(st){
+ return st.visibleBuckets.length&&st.denomH?`<div class="chart-wrap"><div class="donut" role="img" aria-label="Activity percentage donut chart" style="background:${ringGradient(st)}"><div class="donut-center"><div class="donut-main">${hoursNumber(st.shownH)} h</div><div class="donut-sub">shown time</div></div></div>${distributionLegend(st)}</div>`:'<div class="empty-state"><div class="empty-symbol">◌</div>No matching activity recorded for this selection.</div>';
+}
+function histogramLegend(st){
+ if(!st.visibleBuckets.length)return '';
+ return `<div class="hist-legend" aria-label="Histogram activity color legend">${st.visibleBuckets.map(b=>`<div class="hist-legend-item"><i class="dot" style="background:${b.color}"></i><span>${esc(b.name)}</span><strong>${hoursNumber(b.hours)} h</strong></div>`).join('')}</div>`;
+}
+function openExpandedChart(kind){
+ if(!['distribution','histogram'].includes(kind))return;
+ const st=collectStats();
+ const isDistribution=kind==='distribution';
+ const title=isDistribution?'Activity distribution':'Activity over time';
+ const denomNames={shown:'Shown activities',focus:'Focused activity (before filters)',recorded:'All recorded time',elapsed:'Elapsed clock time'};
+ const context=`${esc(st.range.description)} · ${esc(denomNames[ui.denom])}`;
+ const description=isDistribution?'Percentages are calculated using the currently selected denominator. Colored categories represent recorded time.':'Bars show hours, not percentages of calendar time. Colors match the included activities.';
+ const content=isDistribution?distributionVisual(st):`${makeHistogram(st,true)}${histogramLegend(st)}`;
+ showModal(`${modalHeader(title)}<div class="chart-fullscreen-context">${context}</div><div class="chart-fullscreen-body">${content}</div><div class="chart-fullscreen-caption">${description}</div>`, 'chart');
 }
 function renderInsights(){
  const st=collectStats(),active=state.labels;
@@ -201,10 +223,10 @@ function renderInsights(){
  <div class="filter-actions"><button class="advanced-toggle" data-action="toggle-advanced">${ui.advanced?'▾ Hide additional filters':'▸ Time-of-day & secondary tag filters'}</button><button class="btn mini" data-action="reset-stats">Reset filters</button></div>
  ${ui.advanced?`<div class="advanced-panel"><div class="grid-2"><div class="field"><label for="stat-daypart">Time of day</label><select id="stat-daypart" data-filter="timePeriod"><option value="all">Entire day</option>${state.settings.periods.map(p=>`<option value="${esc(p.id)}" ${ui.timePeriod===p.id?'selected':''}>${esc(p.name)} (${esc(p.start)}–${esc(p.end)})</option>`).join('')}</select></div><div class="field"><label for="stat-tag">Only records tagged with</label><select id="stat-tag" data-filter="tagFilter"><option value="all">Any / no secondary tag</option>${state.tags.filter(t=>!t.archived).map(t=>`<option value="${esc(t.id)}" ${ui.tagFilter===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div></div><p class="form-note">Time-of-day filters split intervals automatically. Tag filters include the full interval carrying that tag.</p></div>`:''}</section>
  <div class="grid-3 mb-18">${cardMetric('Time shown',`${hoursNumber(st.shownH)} h`,'After selected filters')}${cardMetric('Focus total',`${hoursNumber(st.focusH)} h`,'Before tag and visibility filters')}${cardMetric('Denominator',`${hoursNumber(st.denomH)} h`,denomNames[ui.denom])}</div>
- <div class="grid-2 mb-18"><section class="card chart-card"><div class="display-flex space-between"><h2 class="section-title">Activity distribution</h2><span class="soft-badge">${esc(denomNames[ui.denom])}</span></div><div class="section-sub">Tap categories below to include or exclude them.</div>
-  ${st.visibleBuckets.length&&st.denomH?`<div class="chart-wrap"><div class="donut" role="img" aria-label="Activity percentage doughnut chart" style="background:${ringGradient(st)}"><div class="donut-center"><div class="donut-main">${hoursNumber(st.shownH)} h</div><div class="donut-sub">shown time</div></div></div><div class="chart-key">${st.visibleBuckets.map(b=>`<div class="info-line"><span class="legend-name"><i class="dot" style="background:${b.color}"></i><span>${esc(b.name)}</span></span><strong>${percentage(b.hours,st.denomH)}</strong></div>`).join('')}${st.denomH>st.shownH+.0001?`<div class="info-line"><span class="legend-name"><i class="dot" style="background:#edf0ed"></i><span>Outside selection</span></span><strong>${percentage(st.denomH-st.shownH,st.denomH)}</strong></div>`:''}</div></div>`:`<div class="empty-state"><div class="empty-symbol">◌</div>No matching activity recorded for this selection.</div>`}
-  <div class="chart-footer"><div class="small-head">Include / exclude from this chart</div><div class="checkbox-row">${st.allBuckets.length?st.allBuckets.map(b=>`<label class="check-chip"><input type="checkbox" data-bucket="${esc(b.key)}" ${ui.hidden.has(b.key)?'':'checked'}><span class="label-dot" style="background:${b.color}"></span>${esc(b.name)}</label>`).join(''):'<span class="hint">No categories in the selected period.</span>'}</div></div>
- </section><section class="card chart-card"><h2 class="section-title">Activity over time</h2><div class="section-sub">Stacked recorded hours, using the same category and time filters.</div>${makeHistogram(st)}<div class="hint">Bar height represents hours, not percent of the calendar period.</div></section></div>
+ <div class="grid-2 mb-18 insights-charts"><section class="card chart-card"><div class="chart-card-head"><h2 class="section-title">Activity distribution</h2><button type="button" class="btn mini expand-chart-btn" data-action="expand-chart" data-chart="distribution" aria-label="View activity distribution full screen">⛶ Full screen</button></div><div class="soft-badge chart-denom">${esc(denomNames[ui.denom])}</div><div class="section-sub">Tap categories below to include or exclude them.</div>
+ ${distributionVisual(st)}
+ <div class="chart-footer"><div class="small-head">Include / exclude from this chart</div><div class="checkbox-row">${st.allBuckets.length?st.allBuckets.map(b=>`<label class="check-chip"><input type="checkbox" data-bucket="${esc(b.key)}" ${ui.hidden.has(b.key)?'':'checked'}><span class="label-dot" style="background:${b.color}"></span>${esc(b.name)}</label>`).join(''):'<span class="hint">No categories in the selected period.</span>'}</div></div>
+ </section><section class="card chart-card"><div class="chart-card-head"><h2 class="section-title">Activity over time</h2><button type="button" class="btn mini expand-chart-btn" data-action="expand-chart" data-chart="histogram" aria-label="View activity over time full screen">⛶ Full screen</button></div><div class="section-sub">Stacked recorded hours, using the same category and time filters.</div>${makeHistogram(st)}${histogramLegend(st)}<div class="hint">Bar height represents hours, not percent of the calendar period.</div></section></div>
  <section class="card"><div class="display-flex space-between"><div><h2 class="section-title">Secondary tags</h2><div class="section-sub">Percentage of ${esc(currentFocus?.name||'recorded time')} that included each tag. Tags may overlap.</div></div><span class="soft-badge">Optional</span></div><div class="mt-16">${st.usedTags.length?st.usedTags.map(t=>`<div class="info-line"><span>${esc(t.name)}</span><span><strong>${hoursNumber(t.hours)} h</strong> <span class="muted small"> · ${percentage(t.hours,st.focusH)}</span></span></div>`).join(''):'<div class="empty-state">No secondary tags were used within this focus and date/time range.</div>'}</div><div class="hint mt-16">Tags count only when attached to a record; their hours never increase the total recorded time.</div></section>
  </div>`;
 }
@@ -224,8 +246,8 @@ function renderSettings(){const periods=state.settings.periods;return `<div clas
  <section class="card"><h2 class="section-title">Storage and privacy</h2><div class="key-value"><span>Activity data</span><strong>On this device</strong></div><div class="key-value"><span>Accounts and analytics</span><strong>None</strong></div><div class="key-value"><span>Internet needed to log</span><strong>No</strong></div><div class="key-value"><span>Records</span><strong>${state.entries.length}</strong></div><div class="key-value"><span>Browser database</span><strong>${storageOK?'Available':'Unavailable'}</strong></div><div class="btnrow mt-16"><button class="btn" data-action="persist">Request persistent storage</button><button class="btn" data-action="check-storage">Check storage status</button></div><p class="form-note" id="persist-status">Browser storage can be removed when you clear this site's data. Export backups regularly.</p></section>
  <section class="card"><h2 class="section-title">About Dayfold</h2><p class="hint">Dayfold is a self-contained, offline-capable activity journal. No accounts, ads, telemetry, network APIs, or external libraries are used. After the initial installation and caching of application files, you can record and analyze activities offline.</p><div class="callout">For installation as a phone app, these files must first be served from an HTTPS address (or localhost). A downloaded HTML file alone cannot install a service worker.</div><div class="btnrow mt-16"><button class="btn" data-action="install">Install app</button></div><p class="form-note">If installation does not appear, use your Android browser's menu → Install app or Add to Home screen.</p></section></div></div>`;}
 
-function closeModal(){document.querySelector('#modal-root').innerHTML='';}
-function showModal(html){document.querySelector('#modal-root').innerHTML=`<div class="modal-backdrop"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;const first=document.querySelector('.modal input:not([type=hidden]),.modal select');first?.focus();}
+function closeModal(){document.querySelector('#modal-root').innerHTML='';document.body.classList.remove('dialog-open');}
+function showModal(html,kind='normal'){const chart=kind==='chart';document.body.classList.add('dialog-open');document.querySelector('#modal-root').innerHTML=`<div class="modal-backdrop${chart?' chart-fullscreen-backdrop':''}"><div class="modal${chart?' chart-fullscreen':''}" role="dialog" aria-modal="true">${html}</div></div>`;const first=document.querySelector('.modal input:not([type=hidden]),.modal select,.modal button');first?.focus();}
 function modalHeader(title){return `<div class="modal-head"><h2>${esc(title)}</h2><button class="btn icon-only mini" data-action="close-modal" aria-label="Close">×</button></div>`;}
 function openEntryModal(existing=null,suggest=null){
  const current=state.entries.find(x=>x.id===existing);const date=dateFromYMD(ui.journalDate),startDay=date.getTime();
@@ -323,6 +345,7 @@ async function handleAction(action,el){
  if(action==='gap-entry'){let start=Number(el.dataset.start),end=Number(el.dataset.end);const today=ui.journalDate===localYMD(new Date());if(today)end=Math.min(end,Date.now());if(end-start>6*ONE_HOUR){if(today){start=Math.max(start,end-ONE_HOUR);}else{start=Math.max(start,dateFromYMD(ui.journalDate).getTime()+9*ONE_HOUR);end=Math.min(end,start+ONE_HOUR);}}if(end>start)openEntryModal(null,{start,end});else toast('There is no elapsed gap to fill.');}
  if(action==='edit-entry')openEntryModal(id);
  if(action==='close-modal')closeModal();
+ if(action==='expand-chart')openExpandedChart(el.dataset.chart);
  if(action==='delete-entry'&&confirm('Delete this activity record?')){const ok=await commit(s=>{s.entries=s.entries.filter(x=>x.id!==id);},'Activity deleted');if(ok)closeModal();}
  if(action==='new-label')openLabelModal();
  if(action==='new-child')openLabelModal(null,id);

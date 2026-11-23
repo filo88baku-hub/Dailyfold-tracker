@@ -86,22 +86,74 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .color-option.selected { box-shadow: 0 0 0 2px #b4e5c0; }
 .toast { background: #365a42; color: #f4fff5; }
 .jump-date { color: #b7d2bf; }
-/* The free Netlify badge sits at the bottom-right of the site. Keep navigation
-   well above it, rather than allowing its independent iframe to obscure tabs. */
+/* Compact bottom navigation for hosting without an overlay badge. */
 @media (max-width: 800px) {
-  .app-shell { padding-bottom: calc(142px + env(safe-area-inset-bottom)); }
   .bottom-nav {
-    bottom: 68px;
     background: rgba(25, 39, 32, .98);
     border-top-color: #374e3d;
-    border-bottom: 1px solid #374e3d;
     box-shadow: 0 0 18px rgba(0, 0, 0, .17);
   }
   .bottom-btn { color: #afc2b3; }
   .bottom-btn.active { color: #a9e3b9; background: #284332; }
-  .page { padding-bottom: 120px; }
-  .toast { bottom: 144px; }
 }
 @media (max-width: 430px) {
   .bottom-btn { min-width: 0; flex: 1; padding: 6px 3px; }
+}
+
+/* Dayfold v0.3: responsive chart cards, readable figures, and immersive chart viewer. */
+.insights-charts { align-items: stretch; }
+.chart-card-head { display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px; }
+.chart-card-head .section-title { margin: 0; }
+.expand-chart-btn { flex-shrink:0; background:#294435; border-color:#456a51; color:#d8f2dd; }
+.chart-denom { display:inline-block; margin:5px 0 9px; }
+.chart-wrap { min-width:0; }
+.chart-key { min-width:0; }
+.chart-key .info-line { display:flex; align-items:center; gap:12px; }
+.chart-key .legend-name { flex:1 1 0; min-width:0; gap:2px; }
+.chart-key .legend-name>span:last-child { white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere; }
+.chart-key .legend-metric { flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:3px;white-space:nowrap; }
+.chart-key .legend-metric strong { font-size:14px;color:#edf9ee; }
+.chart-key .legend-hours { color:#b3c9b8;font-size:11px; }
+.hist-legend { display:grid;grid-template-columns:repeat(auto-fit,minmax(142px,1fr));gap:8px 15px;border-top:1px solid var(--line);padding:15px 0 11px;margin-top:8px; }
+.hist-legend-item { min-width:0;display:flex;align-items:center;gap:6px;font-size:12px;color:#d5e8dc; }
+.hist-legend-item>span { min-width:0;overflow-wrap:anywhere;flex:1 1 auto; }
+.hist-legend-item strong { font-size:12px;white-space:nowrap;color:#eef7ef; }
+.dialog-open { overflow:hidden; }
+.chart-fullscreen-backdrop { padding:0; }
+.chart-fullscreen { width:100vw;max-width:none;height:100dvh;min-height:100dvh;max-height:100dvh;overflow-y:auto;overflow-x:hidden;border-radius:0;padding:22px max(20px,env(safe-area-inset-left)) calc(30px + env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-right));background:var(--bg); }
+.chart-fullscreen .modal-head { position:sticky;top:-22px;z-index:2;background:var(--bg);padding:10px 0 14px;border-bottom:1px solid var(--line); }
+.chart-fullscreen .modal-head h2 { font-size:clamp(19px,4vw,25px); }
+.chart-fullscreen-context { color:#c3d8c8;font-size:13px;padding:13px 0; }
+.chart-fullscreen-body { max-width:1100px;margin:0 auto; }
+.chart-fullscreen .chart-wrap { display:flex;justify-content:center;gap:clamp(20px,5vw,80px);max-width:900px;margin:0 auto;padding:25px 0; }
+.chart-fullscreen .donut { width:clamp(230px,37vw,350px); }
+.chart-fullscreen .donut-main { font-size:clamp(25px,4vw,36px); }
+.chart-fullscreen .donut-sub { font-size:14px; }
+.chart-fullscreen .chart-key { min-width:190px;max-width:400px; }
+.chart-fullscreen .chart-key .info-line { font-size:15px; }
+.chart-fullscreen .chart-key .legend-metric strong { font-size:17px; }
+.chart-fullscreen .chart-key .legend-hours { font-size:13px; }
+.chart-fullscreen .hist-chart-large { height:350px;gap:12px;overflow-x:auto;margin-top:20px; }
+.chart-fullscreen .hist-chart-large .hist-col { min-width:44px; }
+.chart-fullscreen .hist-chart-large .hist-label { font-size:12px; }
+.chart-fullscreen .hist-chart-large .hist-top { font-size:12px; }
+.chart-fullscreen .hist-legend { margin-top:16px; }
+.chart-fullscreen-caption { max-width:900px;margin:12px auto 0;border-top:1px solid var(--line);padding:18px 0;color:#c0d2c4;line-height:1.6;font-size:14px; }
+@media (max-width: 800px) {
+ .insights-charts { grid-template-columns:minmax(0,1fr); }
+ .insights-charts .chart-card { min-width:0; }
+ .insights-charts .chart-wrap { flex-direction:column;align-items:center; }
+ .insights-charts .chart-key { width:100%;max-width:440px; }
+ .insights-charts .donut { width:min(60vw,260px); }
+ .chart-fullscreen { padding:12px 16px calc(25px + env(safe-area-inset-bottom));max-height:100dvh;border-radius:0; }
+ .chart-fullscreen .modal-head { top:-12px; }
+ .chart-fullscreen .chart-wrap { flex-direction:column;align-items:center;gap:10px;padding:10px 0; }
+ .chart-fullscreen .donut { width:min(67vw,310px); }
+ .chart-fullscreen .chart-key { width:100%;max-width:600px; }
+ .chart-fullscreen .hist-chart-large { height:350px; }
+}
+@media (max-width:430px){
+ .insights-charts .chart-wrap { gap:12px; }
+ .insights-charts .chart-key .info-line { padding:11px 0; }
+ .chart-fullscreen .donut { width:min(67vw,280px); }
 }
