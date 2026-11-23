@@ -3,7 +3,17 @@ const DB_NAME = 'dayfold-private-v1';
 const STORAGE_KEY = 'journal';
 const ONE_HOUR = 3600000;
 const ONE_DAY = 86400000;
-const COLORS = ['#4B82C3','#7CA6D8','#4A916B','#8BAF7E','#D89F58','#BC8B9F','#807CAC','#779A9B','#CF7A68','#839299','#536EA6','#9E8B6D'];
+// Reusable palette: distinct colors are suggested within each sibling group only.
+// Keep the original swatches for continuity with existing labels.
+const COLORS = [
+ '#4B82C3','#7CA6D8','#4A916B','#8BAF7E','#D89F58','#BC8B9F',
+ '#807CAC','#779A9B','#CF7A68','#839299','#536EA6','#9E8B6D',
+ '#E07876','#DA7651','#C4A34B','#B4BC5E','#7EA65F','#3FAD9A',
+ '#4AACC7','#688BE0','#A67CD1','#D47AC2','#B56B8F','#8A7770',
+ '#D8B074','#96C68D','#5DB7AF','#74C5DB','#94A6E8','#BE99E7',
+ '#E7A3BC','#A4A4A4','#A66B46','#9C8E4D','#598D50','#36867D',
+ '#456A9B','#8663AE','#A85C76','#BD635F','#7F9FB1','#B7A3C3'
+];
 const DEFAULT_PERIODS = [
   {id:'night',name:'Night',start:'22:00',end:'07:00'},
   {id:'morning',name:'Morning',start:'07:00',end:'12:00'},
@@ -44,6 +54,40 @@ async function commit(mutator, successText){
 }
 function esc(v=''){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function safeColor(c){return /^#[0-9a-fA-F]{6}$/.test(c)?c:'#879C92';}
+function colorDistance(a,b){
+ const channels=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));
+ const x=channels(safeColor(a)),y=channels(safeColor(b));
+ // Weighted RGB distance. Enough to spread the small preset palette visually.
+ return Math.hypot(0.85*(x[0]-y[0]),x[1]-y[1],1.1*(x[2]-y[2]));
+}
+function suggestedLabelColor(parentId=null, excludeId=null){
+ // No global uniqueness requirement: colors may be reused under another parent.
+ const peers=state.labels.filter(l=>(l.parentId||null)===(parentId||null) && l.id!==excludeId);
+ const peerColors=peers.map(l=>safeColor(l.color));
+ const occupied=new Set(peerColors.map(c=>c.toLowerCase()));
+ const available=COLORS.filter(c=>!occupied.has(c.toLowerCase()));
+ if(!available.length)return COLORS[peerColors.length % COLORS.length];
+ // Prefer a visibly different color from siblings (and, secondarily, the parent).
+ const references=[...peerColors];
+ const parent=parentId ? state.labels.find(l=>l.id===parentId) : null;
+ if(parent)references.push(safeColor(parent.color));
+ if(!references.length)return available[0];
+ return available.reduce((best,c)=>{
+  const gap=Math.min(...references.map(r=>colorDistance(c,r)));
+  return gap>best.gap ? {color:c,gap} : best;
+ },{color:available[0],gap:-1}).color;
+}
+function selectLabelColor(color,manual=true){
+ const form=document.querySelector('#label-form');if(!form)return;
+ const chosen=safeColor(color);
+ form.querySelector('#label-color').value=chosen;
+ form.querySelector('#label-custom-color').value=chosen;
+ form.querySelector('#label-color-preview').style.backgroundColor=chosen;
+ form.querySelector('#label-color-hex').textContent=chosen.toUpperCase();
+ form.querySelectorAll('.color-option').forEach(b=>b.classList.toggle('selected',b.dataset.color.toLowerCase()===chosen.toLowerCase()));
+ if(manual)form.dataset.colorChoice='manual';
+}
+
 function localYMD(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function dateFromYMD(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
 function addDays(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);}
@@ -286,17 +330,22 @@ async function saveEntry(form){const f=new FormData(form);const start=Date.parse
  const ok=await commit(next=>{if(id){const i=next.entries.findIndex(x=>x.id===id);if(i<0)throw new Error('Entry not found');next.entries[i]=record;}else next.entries.push(record);},id?'Activity updated':'Activity saved');
  if(ok){ui.journalDate=localYMD(new Date(start));closeModal();render();}
 }
-function openLabelModal(id=null,parentId=null){const label=id?labelById(id):null;const parent=label?labelById(label.parentId):labelById(parentId);
+function openLabelModal(id=null,parentId=null){
+ const label=id?labelById(id):null;
+ const parent=label?labelById(label.parentId):labelById(parentId);
  const archived=label?.archived;
+ const selectedParentId=label?.parentId||parentId||null;
+ const initialColor=safeColor(label?.color||suggestedLabelColor(selectedParentId));
  showModal(`${modalHeader(label?'Edit label':parent?'New sublabel':'New main label')}<form id="label-form" class="modal-fields">
  <div class="field"><label for="label-name">Label name</label><input id="label-name" name="name" maxlength="70" value="${esc(label?.name||'')}" placeholder="e.g. Study" required></div>
- <div class="field"><label for="label-parent">Parent</label><select name="parentId" id="label-parent"><option value="">None — main label</option>${state.labels.filter(x=>!x.parentId&&(!x.archived||x.id===label?.parentId)&&x.id!==id).map(x=>`<option value="${esc(x.id)}" ${x.id===(label?.parentId||parentId)?'selected':''}>${esc(x.name)}</option>`).join('')}</select><div class="form-note">Only two levels are used. Main labels can be recorded directly.</div></div>
- <div class="field"><span class="field-label">Color</span><div class="color-picker">${COLORS.map(c=>`<button type="button" class="color-option ${c===(label?.color||parent?.color||COLORS[0])?'selected':''}" data-action="pick-color" data-color="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join('')}</div><input type="hidden" name="color" id="label-color" value="${safeColor(label?.color||parent?.color||COLORS[0])}"></div>
+ <div class="field"><label for="label-parent">Parent</label><select name="parentId" id="label-parent"><option value="">None — main label</option>${state.labels.filter(x=>!x.parentId&&(!x.archived||x.id===label?.parentId)&&x.id!==id).map(x=>`<option value="${esc(x.id)}" ${x.id===selectedParentId?'selected':''}>${esc(x.name)}</option>`).join('')}</select><div class="form-note">Only two levels are used. Main labels can be recorded directly.</div></div>
+ <div class="field"><span class="field-label">Color</span><div class="label-color-tools"><span class="label-color-preview" id="label-color-preview" style="background:${initialColor}" aria-hidden="true"></span><code id="label-color-hex">${initialColor.toUpperCase()}</code><button type="button" class="btn mini" data-action="suggest-color" title="Choose a color different from other labels under the same parent">Suggest distinct color</button></div><div class="color-picker" aria-label="Preset label colors">${COLORS.map(c=>`<button type="button" class="color-option ${c.toLowerCase()===initialColor.toLowerCase()?'selected':''}" data-action="pick-color" data-color="${c}" style="background:${c}" aria-label="Color ${c}" title="${c}"></button>`).join('')}</div><div class="label-custom-color"><label for="label-custom-color">Or choose any color</label><input type="color" id="label-custom-color" value="${initialColor}" aria-label="Custom label color"></div><input type="hidden" name="color" id="label-color" value="${initialColor}"><div class="form-note">New labels get a color distinct from siblings when possible. The same color may be reused under other main labels. Existing colors are preserved unless you change them.</div></div>
  <div class="form-error" id="label-error"></div>
  <div class="modal-foot">${label?`<button type="button" class="btn mini push-left" data-action="archive-label" data-id="${esc(id)}">${archived?'Unarchive':'Archive'}</button><button type="button" class="btn danger mini" data-action="delete-label" data-id="${esc(id)}">Delete</button>`:'<span class="push-left"></span>'}<button type="button" class="btn" data-action="close-modal">Cancel</button><button type="submit" class="btn primary">Save label</button></div>
  </form>`);
- document.querySelector('#label-form').dataset.existing=id||'';
+ const form=document.querySelector('#label-form');form.dataset.existing=id||'';form.dataset.colorChoice=label?'manual':'automatic';
 }
+
 async function saveLabel(form){const f=new FormData(form);const id=form.dataset.existing;const name=String(f.get('name')||'').trim();const parentId=String(f.get('parentId')||'')||null;const color=safeColor(String(f.get('color')||''));const error=document.querySelector('#label-error');
  if(!name){error.textContent='Enter a name.';return;}
  if(parentId&&(parentId===id||!labelById(parentId)||labelById(parentId).parentId)){error.textContent='Choose a main label as parent.';return;}
@@ -350,7 +399,8 @@ async function handleAction(action,el){
  if(action==='new-label')openLabelModal();
  if(action==='new-child')openLabelModal(null,id);
  if(action==='edit-label')openLabelModal(id);
- if(action==='pick-color'){document.querySelectorAll('.color-option').forEach(b=>b.classList.toggle('selected',b===el));document.querySelector('#label-color').value=el.dataset.color;}
+ if(action==='pick-color')selectLabelColor(el.dataset.color);
+ if(action==='suggest-color'){const form=document.querySelector('#label-form');if(form){selectLabelColor(suggestedLabelColor(form.querySelector('#label-parent').value||null,form.dataset.existing||null),false);form.dataset.colorChoice='automatic';}}
  if(action==='archive-label'){
   const l=labelById(id),children=state.labels.filter(x=>x.parentId===id);
   const archived=!l.archived;
@@ -399,10 +449,18 @@ document.addEventListener('change',async e=>{
  }
  if(el.matches('[data-bucket]')){if(el.checked)ui.hidden.delete(el.dataset.bucket);else ui.hidden.add(el.dataset.bucket);render();return;}
  if(el.matches('[data-setting="showArchived"]')){ui.showArchived=el.checked;render();return;}
+ if(el.id==='label-parent'){
+  const form=el.closest('#label-form');
+  if(form && !form.dataset.existing && form.dataset.colorChoice==='automatic'){
+   selectLabelColor(suggestedLabelColor(el.value||null),false);
+  }
+  return;
+ }
  if(el.id==='restore-file'){await restoreFile(el.files?.[0]);}
 });
 document.addEventListener('submit',async e=>{if(['entry-form','label-form','tag-form','periods-form'].includes(e.target.id)){e.preventDefault();const f=e.target;try{if(f.id==='entry-form')await saveEntry(f);if(f.id==='label-form')await saveLabel(f);if(f.id==='tag-form')await saveTag(f);if(f.id==='periods-form')await savePeriods(f);}catch(err){console.error(err);toast('Could not save; check the input.');}}});
-document.addEventListener('input',e=>{if(e.target.id==='journal-search'){ui.searchTerm=e.target.value;const results=document.querySelector('#journal-search-results');if(results)results.innerHTML=renderSearchResults();}});
+document.addEventListener('input',e=>{if(e.target.id==='journal-search'){ui.searchTerm=e.target.value;const results=document.querySelector('#journal-search-results');if(results)results.innerHTML=renderSearchResults();}
+ if(e.target.id==='label-custom-color')selectLabelColor(e.target.value);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
 async function init(){
